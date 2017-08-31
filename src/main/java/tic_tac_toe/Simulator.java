@@ -5,10 +5,52 @@ import com.google.inject.name.Named;
 
 public class Simulator {
 
+    private Player playerX;
+    private Player playerO;
+
+    public Player getPlayerX() {
+        return playerX;
+    }
+
+    @Inject
+    public void setPlayerX(@Named("player_x") Player playerX) {
+        this.playerX = playerX;
+        this.playerX.setSide(Game.Side.X);
+    }
+
+    public Player getPlayerO() {
+        return playerO;
+    }
+
+    @Inject
+    public void setPlayerO(@Named("player_o") Player playerO) {
+        this.playerO = playerO;
+        this.playerO.setSide(Game.Side.O);
+    }
+
+    public SimulationResult simulate(int gameCount){
+        SimulationResult result = new SimulationResult();
+        for (int i=0; i < gameCount; i++){
+            Game game = new Game();
+            if (i == 0)
+                game.draw();
+            while(game.getGameOutcome() == Game.Outcome.UNDETERMINED){
+                Player currentPlayer = game.getCurrentSide() == Game.Side.X ? playerX : playerO;
+                Point p = currentPlayer.next(game);
+                game.playTurn(p);
+                if (i == 0) game.draw();
+            }
+
+            result.addGameOutcome(game.getGameOutcome());
+        }
+        return result;
+    }
+
     public static class SimulationResult{
         private int gamesWonByX;
         private int gamesWonByO;
         private int gamesDrawn;
+        private int gamesCount;
 
         public int getGamesWonByX() {
             return gamesWonByX;
@@ -25,8 +67,6 @@ public class Simulator {
         public int getGamesCount() {
             return gamesCount;
         }
-
-        private int gamesCount;
 
         public void addGameOutcome(Game.Outcome o){
             gamesCount ++;
@@ -55,47 +95,20 @@ public class Simulator {
         public float getPercentageDrawn(){
             return gamesDrawn * 100 / gamesCount;
         }
-    }
 
-    public Player getPlayerX() {
-        return playerX;
-    }
+        @Override
+        public String toString() {
+            return String.format(
+                    "X: %s (%s%%); O: %s (%s%%); D: %s (%s%%)",
+                    this.getGamesWonByX(),
+                    this.getPercentageWon(Game.Side.X),
+                    this.getGamesWonByO(),
+                    this.getPercentageWon(Game.Side.O),
+                    this.getGamesDrawn(),
+                    this.getPercentageDrawn()
+            );
 
-    @Inject
-    public void setPlayerX(@Named("player_x") Player playerX) {
-        this.playerX = playerX;
-        this.playerX.setSide(Game.Side.X);
-    }
-
-    public Player getPlayerO() {
-        return playerO;
-    }
-
-    @Inject
-    public void setPlayerO(@Named("player_o") Player playerO) {
-        this.playerO = playerO;
-        this.playerO.setSide(Game.Side.O);
-    }
-
-
-    private Player playerX;
-    private Player playerO;
-
-    public SimulationResult simulate(int gameCount){
-        SimulationResult result = new SimulationResult();
-        for (int i=0; i < gameCount; i++){
-            Game game = new Game();
-            game.draw();
-            while(game.getGameOutcome() == Game.Outcome.UNDETERMINED){
-                Player currentPlayer = game.getCurrentSide() == Game.Side.X ? playerX : playerO;
-                Point p = currentPlayer.next(game.getBoard());
-                game.playTurn(p);
-                game.draw();
-            }
-
-            result.addGameOutcome(game.getGameOutcome());
         }
-        return result;
     }
 
 

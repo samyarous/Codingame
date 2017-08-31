@@ -7,7 +7,7 @@ import tic_tac_toe.Point;
 import java.util.Scanner;
 
 public class HumanPlayer extends Player {
-    public Point next(Game.Board board) {
+    public Point next(Game game) {
         System.out.print(String.format("Player %s Move: ", this.getSide()));
         Scanner scanner = new Scanner(System. in);
         String input = scanner. nextLine();
