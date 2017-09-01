@@ -3,7 +3,7 @@ package tic_tac_toe.players;
 import tic_tac_toe.Game;
 import tic_tac_toe.Player;
 import tic_tac_toe.Point;
-import utils.MiniMaxAlgorithm;
+import algorithms.MiniMaxAlgorithm;
 
 import java.util.ArrayList;
 import java.util.List;

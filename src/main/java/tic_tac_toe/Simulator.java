@@ -31,6 +31,9 @@ public class Simulator {
     public SimulationResult simulate(int gameCount){
         SimulationResult result = new SimulationResult();
         for (int i=0; i < gameCount; i++){
+            if( i % Math.round(gameCount / 100) == 0) {
+                System.out.println(Math.round(i * 100 / gameCount));
+            }
             Game game = new Game();
             if (i == 0)
                 game.draw();
