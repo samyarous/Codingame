@@ -56,7 +56,7 @@ public class MetricRegistry {
     if(!histogramsMap.containsKey(name)){
       histogramsMap.put(name, new Histogram());
     }
-    return histogramsMap.get(histogramsMap);
+    return histogramsMap.get(name);
   }
 
   public static class Reservoir {
@@ -81,10 +81,11 @@ public class MetricRegistry {
 
   public static class Histogram {
 
-    private long minValue;
-    private long maxValue;
-    private long valueSum;
-    private double avgValue;
+    private long minValue=Long.MAX_VALUE;
+    private long maxValue=Long.MIN_VALUE;
+    private long valuesSum=0;
+    private long valuesCount = 0;
+    private double avgValue=0;
     private Reservoir reservoir = new Reservoir();
 
 
@@ -93,8 +94,9 @@ public class MetricRegistry {
 
       if(value < minValue) minValue = value;
       if(value > maxValue) maxValue = value;
-      valueSum += value;
-      avgValue = valueSum / reservoir.getSize();
+      valuesSum += value;
+      valuesCount ++;
+      avgValue = valuesSum / valuesCount;
     }
 
     public long getMinValue() {
@@ -105,12 +107,16 @@ public class MetricRegistry {
       return maxValue;
     }
 
-    public long getValueSum() {
-      return valueSum;
+    public long getValuesSum() {
+      return valuesSum;
     }
 
     public double getAvgValue() {
       return avgValue;
+    }
+
+    public long getValuesCount() {
+      return valuesCount;
     }
   }
 
@@ -223,7 +229,7 @@ public class MetricRegistry {
 
     public long getValueSum() {
       accountForPastTime();
-      return histogram.getValueSum();
+      return histogram.getValuesSum();
     }
 
     public double getAvgValue() {
