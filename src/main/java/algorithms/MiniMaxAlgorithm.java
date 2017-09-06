@@ -17,8 +17,8 @@ public class MiniMaxAlgorithm <N extends MiniMaxAlgorithm.INode<A>, A extends Mi
 
   private boolean useCaching = true;
   private int     startDepth = Integer.MAX_VALUE;
-  private Map<INode, Double> minCache = new HashMap<>();
-  private Map<INode, Double> maxCache = new HashMap<>();
+  private final static Map<INode, Double> minCache = new HashMap<>();
+  private final static Map<INode, Double> maxCache = new HashMap<>();
 
   private String prefix = this.getClass().getName() + Integer.toString(this.hashCode());
 

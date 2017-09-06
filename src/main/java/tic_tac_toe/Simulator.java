@@ -9,27 +9,28 @@ public class Simulator {
 
     private static MetricRegistry metricRegistry = MetricRegistry.getInstance();
 
-    private Player playerX;
-    private Player playerO;
+    private Player player1;
+    private Player player2;
+    private boolean player_1_first = false;
 
     public Player getPlayerX() {
-        return playerX;
+        return player_1_first ? player1 : player2;
     }
 
     @Inject
-    public void setPlayerX(@Named("player_x") Player playerX) {
-        this.playerX = playerX;
-        this.playerX.setSide(Game.Side.X);
+    public void setPlayer1(@Named("player_1") Player player1) {
+        this.player1 = player1;
+        this.player1.setSide(Game.Side.X);
     }
 
     public Player getPlayerO() {
-        return playerO;
+        return player_1_first ? player2 : player1;
     }
 
     @Inject
-    public void setPlayerO(@Named("player_o") Player playerO) {
-        this.playerO = playerO;
-        this.playerO.setSide(Game.Side.O);
+    public void setPlayer2(@Named("player_2") Player player2) {
+        this.player2 = player2;
+        this.player2.setSide(Game.Side.O);
     }
 
     public SimulationResult simulate(int gameCount){
@@ -42,17 +43,18 @@ public class Simulator {
             if (i == 0)
                 game.draw();
             while(game.getGameOutcome() == Game.Outcome.UNDETERMINED){
-                Player currentPlayer = game.getCurrentSide() == Game.Side.X ? playerX : playerO;
+                Player currentPlayer = game.getCurrentSide() == Game.Side.X ? getPlayerX() : getPlayerO();
                 Point p = currentPlayer.next(game);
                 game.playTurn(p);
                 if (i == 0) game.draw();
             }
 
             result.addGameOutcome(game.getGameOutcome());
+            player_1_first = !player_1_first;
         }
 
-        result.addMetricReport(Side.X, playerX.report());
-        result.addMetricReport(Side.O, playerO.report());
+        result.addMetricReport(Side.X, player1.report());
+        result.addMetricReport(Side.O, player2.report());
         return result;
     }
 
