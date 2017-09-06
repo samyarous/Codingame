@@ -4,6 +4,8 @@ import java.awt.*;
 
 public abstract class Player {
     public abstract  Point next(Game board);
+    public abstract String report();
+
     private Game.Side side;
 
 
@@ -18,4 +20,5 @@ public abstract class Player {
     public void setSide(Game.Side side) {
         this.side = side;
     }
+
 }

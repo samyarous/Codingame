@@ -2,8 +2,12 @@ package tic_tac_toe;
 
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
+import tic_tac_toe.Game.Side;
+import utils.MetricRegistry;
 
 public class Simulator {
+
+    private static MetricRegistry metricRegistry = MetricRegistry.getInstance();
 
     private Player playerX;
     private Player playerO;
@@ -31,7 +35,7 @@ public class Simulator {
     public SimulationResult simulate(int gameCount){
         SimulationResult result = new SimulationResult();
         for (int i=0; i < gameCount; i++){
-            if( i % Math.round(gameCount / 100) == 0) {
+            if( i % Math.ceil(gameCount / 100) == 0) {
                 System.out.println(Math.round(i * 100 / gameCount));
             }
             Game game = new Game();
@@ -46,6 +50,9 @@ public class Simulator {
 
             result.addGameOutcome(game.getGameOutcome());
         }
+
+        result.addMetricReport(Side.X, playerX.report());
+        result.addMetricReport(Side.O, playerO.report());
         return result;
     }
 
@@ -54,6 +61,26 @@ public class Simulator {
         private int gamesWonByO;
         private int gamesDrawn;
         private int gamesCount;
+        private String playerXReport;
+        private String playerOReport;
+
+
+        public double getAvgTime(){
+            return metricRegistry.getTimer("computeBestAction").getAvgTime();
+        }
+
+        public double getMinTime(){
+            return metricRegistry.getTimer("computeBestAction").getMinTime();
+        }
+
+        public double getMaxTime(){
+            return metricRegistry.getTimer("computeBestAction").getMaxTime();
+        }
+
+        public double getOperationCount(){
+            return metricRegistry.getCounter("computeBestAction").getCount();
+        }
+
 
         public int getGamesWonByX() {
             return gamesWonByX;
@@ -102,15 +129,28 @@ public class Simulator {
         @Override
         public String toString() {
             return String.format(
-                    "X: %s (%s%%); O: %s (%s%%); D: %s (%s%%)",
+                    "Result: G: %d; X: %d (%.2f%%); O: %d (%.2f%%); D: %d (%.2f%%)\n"
+                      + "PlayerX: %s\n"
+                      + "PlayerO: %s",
+                    this.getGamesCount(),
                     this.getGamesWonByX(),
                     this.getPercentageWon(Game.Side.X),
                     this.getGamesWonByO(),
                     this.getPercentageWon(Game.Side.O),
                     this.getGamesDrawn(),
-                    this.getPercentageDrawn()
+                    this.getPercentageDrawn(),
+                    this.playerXReport,
+                    this.playerOReport
             );
+        }
 
+        public void addMetricReport(Side side, String report) {
+            if(side == Side.X){
+                playerXReport = report;
+            }
+            if(side == Side.O){
+                playerOReport = report;
+            }
         }
     }
 

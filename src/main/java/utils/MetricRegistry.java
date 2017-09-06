@@ -164,6 +164,18 @@ public class MetricRegistry {
       return System.nanoTime() - startTime + elapsedTime;
     }
 
+    public double getAvgTime(){
+      return history.getAvgValue() / Math.pow(10, 9);
+    }
+
+    public double getMinTime(){
+      return history.getMinValue() / Math.pow(10, 9);
+    }
+
+    public double getMaxTime(){
+      return history.getMaxValue() / Math.pow(10, 9);
+    }
+
     private enum State {
       STOPPED,
       PAUSED,
@@ -201,11 +213,12 @@ public class MetricRegistry {
     public void update(int items){
       accountForPastTime();
       count.update(items);
+      lastTime = Math.round(System.currentTimeMillis() / 1000);
     }
 
     private void accountForPastTime() {
       long currentTime = Math.round(System.currentTimeMillis() / 1000);
-      if(lastTime != currentTime) {
+      if(lastTime > 0 && lastTime != currentTime) {
         for (long t = lastTime; t < currentTime; t++) {
           histogram.update(t == lastTime ? count.getCount() : 0);
         }
@@ -240,8 +253,6 @@ public class MetricRegistry {
 
   public static class Gauge {
     long value =0;
-
-
 
     public void update(long value){
       this.value = value;

@@ -14,4 +14,9 @@ public class HumanPlayer extends Player {
         String[] point = input.split(" ");
         return new Point(Integer.parseInt(point[0]), Integer.parseInt(point[1]));
     }
+
+    @Override
+    public String report() {
+        return "";
+    }
 }

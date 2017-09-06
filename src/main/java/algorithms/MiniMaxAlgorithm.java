@@ -3,6 +3,9 @@ package algorithms;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import utils.MetricRegistry;
+import utils.MetricRegistry.Counter;
+import utils.MetricRegistry.Timer;
 
 /**
  * Generic implementation of the minimax algorithm
@@ -16,6 +19,10 @@ public class MiniMaxAlgorithm <N extends MiniMaxAlgorithm.INode<A>, A extends Mi
   private int     startDepth = Integer.MAX_VALUE;
   private Map<INode, Double> minCache = new HashMap<>();
   private Map<INode, Double> maxCache = new HashMap<>();
+
+  private String prefix = this.getClass().getName() + Integer.toString(this.hashCode());
+
+  private static MetricRegistry metricRegistry = MetricRegistry.getInstance();
 
   /**
    *
@@ -55,10 +62,16 @@ public class MiniMaxAlgorithm <N extends MiniMaxAlgorithm.INode<A>, A extends Mi
    * @param startNode
    */
   public A computeBestAction(N startNode){
+
+    Timer globalTimer = metricRegistry.getTimer(prefix + "computeBestAction");
+
+    globalTimer.startMeasure();
     double bestOutcome = Double.NEGATIVE_INFINITY;
     A bestAction = null;
 
     for (A action: startNode.getPossibleActions()){
+      Timer perNodeTimer = metricRegistry.getTimer(prefix + "computeBestActionPerNode");
+      perNodeTimer.startMeasure();
       N node  = action.apply(startNode);
       double outcome = minValue(node, this.startDepth);
       if (outcome > bestOutcome  ){
@@ -66,7 +79,9 @@ public class MiniMaxAlgorithm <N extends MiniMaxAlgorithm.INode<A>, A extends Mi
         bestOutcome = outcome;
       }
       action.undo(node);
+      perNodeTimer.stopMeasure();
     }
+    globalTimer.stopMeasure();
     return bestAction;
   }
 
@@ -77,12 +92,17 @@ public class MiniMaxAlgorithm <N extends MiniMaxAlgorithm.INode<A>, A extends Mi
    * @param depth
    */
   public double maxValue(N startNode, int depth){
+    metricRegistry.getCounter(prefix + "maxValue").update();
+
     double value = Double.NEGATIVE_INFINITY;
     if(depth == 0 || startNode.isTerminal()){
       return startNode.getUtility();
     }
     if(useCaching && maxCache.containsKey(startNode)){
+      metricRegistry.getCounter(prefix + "CacheHit").update();
       return maxCache.get(startNode);
+    } else {
+      metricRegistry.getCounter(prefix + "CacheMiss").update();
     }
 
     for (A action: startNode.getPossibleActions()){
@@ -93,6 +113,7 @@ public class MiniMaxAlgorithm <N extends MiniMaxAlgorithm.INode<A>, A extends Mi
     }
     if(useCaching){
       minCache.put(startNode, value);
+      metricRegistry.getHistogram(prefix + "Cache").update(minCache.size());
     }
     return value;
   }
@@ -105,11 +126,15 @@ public class MiniMaxAlgorithm <N extends MiniMaxAlgorithm.INode<A>, A extends Mi
    * @param depth
    */
   public double minValue(N startNode, int depth){
+    metricRegistry.getCounter(prefix + "minValue").update();
     if(depth == 0 || startNode.isTerminal()){
       return startNode.getUtility();
     }
     if(useCaching && minCache.containsKey(startNode)){
+      metricRegistry.getCounter(prefix + "CacheHit").update();
       return minCache.get(startNode);
+    } else {
+      metricRegistry.getCounter(prefix + "CacheMiss").update();
     }
 
     double value = Double.POSITIVE_INFINITY;
@@ -121,8 +146,33 @@ public class MiniMaxAlgorithm <N extends MiniMaxAlgorithm.INode<A>, A extends Mi
 
     if(useCaching){
       minCache.put(startNode, value);
+      metricRegistry.getHistogram(prefix + "Cache").update(minCache.size());
     }
     return value;
+  }
+
+  public String report() {
+    return String.format(
+      "MiniMax: \n"
+        + " GlobalTimer: MIN: %.2f, AVG: %.2f, MAX: %.2f\n"
+        + " LocalTimer: MIN: %.2f, AVG: %.2f, MAX: %.2f\n"
+        + " Counter: Min: %d, Max: %d\n"
+        + " CacheSize: Min: %s, AVG: %.2f, Max: %s\n"
+        + " Cache: Miss: %s, Hit: %s",
+      metricRegistry.getTimer(prefix + "computeBestAction").getMinTime(),
+      metricRegistry.getTimer(prefix + "computeBestAction").getAvgTime(),
+      metricRegistry.getTimer(prefix + "computeBestAction").getMaxTime(),
+      metricRegistry.getTimer(prefix + "computeBestActionPerNode").getMinTime(),
+      metricRegistry.getTimer(prefix + "computeBestActionPerNode").getAvgTime(),
+      metricRegistry.getTimer(prefix + "computeBestActionPerNode").getMaxTime(),
+      metricRegistry.getCounter(prefix + "minValue").getCount(),
+      metricRegistry.getCounter(prefix + "maxValue").getCount(),
+      metricRegistry.getHistogram(prefix + "Cache").getMinValue(),
+      metricRegistry.getHistogram(prefix + "Cache").getAvgValue(),
+      metricRegistry.getHistogram(prefix + "Cache").getMaxValue(),
+      metricRegistry.getCounter(prefix + "CacheMiss").getCount(),
+      metricRegistry.getCounter(prefix + "CacheHit").getCount()
+    );
   }
 
   public static interface IAction<N extends INode> {

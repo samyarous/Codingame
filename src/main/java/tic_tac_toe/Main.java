@@ -20,7 +20,7 @@ public class Main {
     public static void main(String[] args) {
         Injector injector = Guice.createInjector(new HumanVsHumanGame());
         Simulator simulator = injector.getInstance(Simulator.class);
-        Simulator.SimulationResult result = simulator.simulate(1000);
+        Simulator.SimulationResult result = simulator.simulate(100);
         System.out.println(result);
     }
 }

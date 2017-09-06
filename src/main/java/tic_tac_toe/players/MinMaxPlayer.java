@@ -98,12 +98,17 @@ public class MinMaxPlayer extends Player {
         }
     }
 
-    MiniMaxAlgorithm<GameState, PossibleAction> algorithm = new MiniMaxAlgorithm<>();
+    MiniMaxAlgorithm<GameState, PossibleAction> algorithm = new MiniMaxAlgorithm<>(true, Integer.MAX_VALUE);
 
     public Point next(Game game) {
         GameState gameState = new GameState(game, this.getSide());
         PossibleAction action = algorithm.computeBestAction(gameState);
         return action.p;
+    }
+
+    @Override
+    public String report() {
+        return algorithm.report();
     }
 
 }

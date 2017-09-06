@@ -1,8 +1,60 @@
 package tic_tac_toe;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 import org.junit.Test;
+import tic_tac_toe.Game.Side;
 
 public class GameTest {
+
+    @Test
+    public void testHashCode(){
+        HashMap<Game, Boolean> before = new HashMap<>();
+        for (Side i00 : new Side[]{Side.X, Side.O, Side.NEUTRAL}){
+            for (Side i01 : new Side[]{Side.X, Side.O, Side.NEUTRAL}) {
+                for (Side i02 : new Side[]{Side.X, Side.O, Side.NEUTRAL}) {
+                    for (Side i10 : new Side[]{Side.X, Side.O, Side.NEUTRAL}) {
+                        for (Side i11 : new Side[]{Side.X, Side.O, Side.NEUTRAL}) {
+                            for (Side i12 : new Side[]{Side.X, Side.O, Side.NEUTRAL}) {
+                                for (Side i20 : new Side[]{Side.X, Side.O, Side.NEUTRAL}) {
+                                    for (Side i21 : new Side[]{Side.X, Side.O, Side.NEUTRAL}) {
+                                        for (Side i22 : new Side[]{Side.X, Side.O, Side.NEUTRAL}) {
+                                            Game g = new Game();
+                                            g.setCell(0, 0, i00);
+                                            g.setCell(0, 1, i01);
+                                            g.setCell(0, 2, i02);
+                                            g.setCell(1, 0, i10);
+                                            g.setCell(1, 1, i11);
+                                            g.setCell(1, 2, i12);
+                                            g.setCell(2, 0, i20);
+                                            g.setCell(2, 1, i21);
+                                            g.setCell(2, 2, i22);
+                                            assert !before.containsKey(g);
+
+                                            before.put(g, false);
+                                            Game g1 = new Game();
+                                            g1.setCell(0, 0, i00);
+                                            g1.setCell(0, 1, i01);
+                                            g1.setCell(0, 2, i02);
+                                            g1.setCell(1, 0, i10);
+                                            g1.setCell(1, 1, i11);
+                                            g1.setCell(1, 2, i12);
+                                            g1.setCell(2, 0, i20);
+                                            g1.setCell(2, 1, i21);
+                                            g1.setCell(2, 2, i22);
+
+                                            assert before.containsKey(g1);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     @Test
     public void testFromString(){
