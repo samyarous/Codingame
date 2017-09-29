@@ -1,5 +1,6 @@
 package tic_tac_toe.players;
 
+import java.util.Random;
 import tic_tac_toe.Game;
 import tic_tac_toe.Player;
 import tic_tac_toe.Point;
@@ -7,11 +8,12 @@ import algorithms.MiniMaxAlgorithm;
 
 import java.util.ArrayList;
 import java.util.List;
+import tic_tac_toe.players.AlphaBetaPlayer.PossibleAction;
 
 import static tic_tac_toe.Game.Side.O;
 import static tic_tac_toe.Game.Side.X;
 
-public class MinMaxPlayer extends Player {
+public class MiniMaxPlayer extends Player {
 
     public static class PossibleAction implements MiniMaxAlgorithm.IAction<GameState> {
 
@@ -43,6 +45,7 @@ public class MinMaxPlayer extends Player {
 
         Game game;
         Game.Side playerSide;
+        private final Random random = new Random();
 
         public GameState(Game game, Game.Side playerSide) {
             this.game = game;
@@ -59,6 +62,7 @@ public class MinMaxPlayer extends Player {
                     }
                 }
             }
+            //result.sort((MiniMaxPlayer.PossibleAction a, MiniMaxPlayer.PossibleAction b) -> random.nextInt());
             return result;
 
         }
@@ -72,9 +76,9 @@ public class MinMaxPlayer extends Player {
         public double getUtility() {
             switch (game.getGameOutcome()){
                 case X_WON:
-                    return playerSide == X ? 100 : -100;
+                    return playerSide == X ? 100: -100;
                 case O_WON:
-                    return playerSide == O ? 100 : -100;
+                    return playerSide == O ? 100: -100;
                 case DRAW:
                     return 0;
                 default:
@@ -89,7 +93,7 @@ public class MinMaxPlayer extends Player {
 
         @Override
         public int hashCode() {
-            return game.hashCode();
+            return game.hashCode() +  (this.playerSide == X ? 1 << 20 : 0);
         }
 
         @Override

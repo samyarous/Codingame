@@ -15,7 +15,12 @@ public class Game {
     private int[] colsSums = new int[Game.BOARD_SIZE];
     private int firstDiagSum = 0;
     private int secondDiagSum = 0;
-    private int totalCount = 0;
+
+  public int getTotalCount() {
+    return totalCount;
+  }
+
+  private int totalCount = 0;
 
     public Game () {
         for (int y = 0; y < Game.BOARD_SIZE; y++) {
@@ -126,6 +131,14 @@ public class Game {
         }
     }
 
+    public Side getLastPlayer(){
+      if(this.totalCount % 2 == 0){
+        return Side.O;
+      } else {
+        return Side.X;
+      }
+    }
+
     public void playTurn(Point p){
         this.setCell(p.x, p.y);
     }
@@ -186,9 +199,11 @@ public class Game {
         return buffer.toString();
     }
 
+
+
     @Override
     public int hashCode() {
-        if(invalidateHash){
+        if(true){
             int off = 0;
             int val = 0;
             hashValue = 0;
@@ -220,17 +235,6 @@ public class Game {
 
         private Side other;
 
-        public int toValue(){
-            switch (this){
-                case X:
-                    return 1;
-                case O:
-                    return -1;
-                default:
-                    return 0;
-            }
-        }
-
         public static Side fromString(String symbol){
             switch(symbol) {
                 case "X":
@@ -240,6 +244,17 @@ public class Game {
 
                 default:
                     return Side.NEUTRAL;
+            }
+        }
+
+        public int toValue(){
+            switch (this){
+                case X:
+                    return 1;
+                case O:
+                    return -1;
+                default:
+                    return 0;
             }
         }
 

@@ -1,20 +1,19 @@
 package tic_tac_toe.players;
 
-import algorithms.AlphaBetaAlgorithm;
+import static tic_tac_toe.Game.Side.O;
+import static tic_tac_toe.Game.Side.X;
+
+import algorithms.NegaMaxAlphaBetaAlgorithm;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import tic_tac_toe.Game;
 import tic_tac_toe.Player;
 import tic_tac_toe.Point;
 
-import java.util.ArrayList;
-import java.util.List;
+public class NegaMaxPlayer extends Player {
 
-import static tic_tac_toe.Game.Side.O;
-import static tic_tac_toe.Game.Side.X;
-
-public class AlphaBetaPlayer extends Player {
-
-  public static class PossibleAction implements AlphaBetaAlgorithm.IAction<GameState> {
+  public static class PossibleAction implements NegaMaxAlphaBetaAlgorithm.IAction<GameState> {
 
     Game.Side side;
     Point p;
@@ -39,7 +38,7 @@ public class AlphaBetaPlayer extends Player {
     }
 
   }
-  public static class GameState implements AlphaBetaAlgorithm.INode<PossibleAction> {
+  public class GameState implements NegaMaxAlphaBetaAlgorithm.INode<PossibleAction> {
 
     private final Random random = new Random();
 
@@ -61,7 +60,7 @@ public class AlphaBetaPlayer extends Player {
           }
         }
       }
-      //result.sort((PossibleAction a, PossibleAction b) -> random.nextInt());
+      result.sort((PossibleAction a, PossibleAction b) -> random.nextInt());
       return result;
 
     }
@@ -75,14 +74,15 @@ public class AlphaBetaPlayer extends Player {
     public double getUtility() {
       switch (game.getGameOutcome()){
         case X_WON:
-          return playerSide == X ? 100 : -100;
+          return game.getCurrentSide() == X ? 100: -100;
         case O_WON:
-          return playerSide == O ? 100 : -100;
+          return game.getCurrentSide() == O ? 100: -100;
         case DRAW:
           return 0;
         default:
-          return 0;
+          throw new RuntimeException("Not ready");
       }
+
     }
 
     @Override
@@ -92,7 +92,7 @@ public class AlphaBetaPlayer extends Player {
 
     @Override
     public int hashCode() {
-      return game.hashCode() + (this.playerSide == X ? 1 << 20 : 0);
+      return game.hashCode();
     }
 
     @Override
@@ -101,7 +101,7 @@ public class AlphaBetaPlayer extends Player {
     }
   }
 
-  AlphaBetaAlgorithm<GameState, PossibleAction> algorithm = new AlphaBetaAlgorithm<>(true, Integer.MAX_VALUE);
+  NegaMaxAlphaBetaAlgorithm<GameState, PossibleAction> algorithm = new NegaMaxAlphaBetaAlgorithm<>(true, Integer.MAX_VALUE);
 
   public Point next(Game game) {
     GameState gameState = new GameState(game, this.getSide());

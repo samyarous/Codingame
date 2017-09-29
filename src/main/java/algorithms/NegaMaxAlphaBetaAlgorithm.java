@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import utils.MetricRegistry;
-import utils.MetricRegistry.Counter;
 import utils.MetricRegistry.Timer;
 
 /**
@@ -12,13 +11,12 @@ import utils.MetricRegistry.Timer;
  *
  * Supports partial search, caching and backtracking
  */
-public class MiniMaxAlgorithm <N extends MiniMaxAlgorithm.INode<A>, A extends MiniMaxAlgorithm.IAction<N>>{
+public class NegaMaxAlphaBetaAlgorithm<N extends NegaMaxAlphaBetaAlgorithm.INode<A>, A extends NegaMaxAlphaBetaAlgorithm.IAction<N>>{
 
 
   private boolean useCaching = false;
   private int     startDepth = Integer.MAX_VALUE;
-  private Map<INode, Double> minCache = new HashMap<>();
-  private Map<INode, Double> maxCache = new HashMap<>();
+  private Map<INode, Double> cache = new HashMap<>();
 
   private String prefix = this.getClass().getName() + Integer.toString(this.hashCode());
 
@@ -29,7 +27,7 @@ public class MiniMaxAlgorithm <N extends MiniMaxAlgorithm.INode<A>, A extends Mi
    * @param useCaching if set to true, we will cache previously visited nodes
    * @param startDepth Specify the maximal depth to explore
    */
-  public MiniMaxAlgorithm(boolean useCaching, int startDepth) {
+  public NegaMaxAlphaBetaAlgorithm(boolean useCaching, int startDepth) {
     this.useCaching = useCaching;
     this.startDepth = startDepth;
   }
@@ -37,7 +35,7 @@ public class MiniMaxAlgorithm <N extends MiniMaxAlgorithm.INode<A>, A extends Mi
   /**
    *
    */
-  public MiniMaxAlgorithm() {
+  public NegaMaxAlphaBetaAlgorithm() {
   }
 
   public boolean isUseCaching() {
@@ -73,7 +71,7 @@ public class MiniMaxAlgorithm <N extends MiniMaxAlgorithm.INode<A>, A extends Mi
       Timer perNodeTimer = metricRegistry.getTimer(prefix + "computeBestActionPerNode");
       perNodeTimer.startMeasure();
       N node  = action.apply(startNode);
-      double outcome = minValue(node, this.startDepth);
+      double outcome = -negaMax(node, this.startDepth);
       if (outcome > bestOutcome  ){
         bestAction = action;
         bestOutcome = outcome;
@@ -91,73 +89,40 @@ public class MiniMaxAlgorithm <N extends MiniMaxAlgorithm.INode<A>, A extends Mi
    * @param startNode
    * @param depth
    */
-  public double maxValue(N startNode, int depth){
-    metricRegistry.getCounter(prefix + "maxValue").update();
+  public double negaMax(N startNode, int depth){
+    metricRegistry.getCounter(prefix + "negaMax").update();
 
     double value = Double.NEGATIVE_INFINITY;
     if(depth == 0 || startNode.isTerminal()){
       return startNode.getUtility();
     }
-    if(useCaching && maxCache.containsKey(startNode)){
+    if(useCaching && cache.containsKey(startNode)){
       metricRegistry.getCounter(prefix + "CacheHit").update();
-      return maxCache.get(startNode);
+      return cache.get(startNode);
     } else {
       metricRegistry.getCounter(prefix + "CacheMiss").update();
     }
 
     for (A action: startNode.getPossibleActions()){
       N node  = action.apply(startNode);
-      value = Math.max(value, minValue(node, depth - 1));
+      value = Math.max(value, -negaMax(node, depth - 1));
       action.undo(node);
-
     }
     if(useCaching){
-      maxCache.put(startNode, value);
-      metricRegistry.getHistogram(prefix + "Cache").update(minCache.size());
+      cache.put(startNode, value);
+      metricRegistry.getHistogram(prefix + "Cache").update(cache.size());
     }
     return value;
   }
 
-  /**
-   *  Given a startNode, return the min value of all the possible actions that follow
-   *  Depth is used to limit how far down the tree we should go. A value greater than zero means we can explore more
-   *
-   * @param startNode
-   * @param depth
-   */
-  public double minValue(N startNode, int depth){
-    metricRegistry.getCounter(prefix + "minValue").update();
-    if(depth == 0 || startNode.isTerminal()){
-      return startNode.getUtility();
-    }
-    if(useCaching && minCache.containsKey(startNode)){
-      metricRegistry.getCounter(prefix + "CacheHit").update();
-      return minCache.get(startNode);
-    } else {
-      metricRegistry.getCounter(prefix + "CacheMiss").update();
-    }
-
-    double value = Double.POSITIVE_INFINITY;
-    for (A action: startNode.getPossibleActions()){
-      N node  = action.apply(startNode);
-      value = Math.min(value, maxValue(node, depth - 1));
-      action.undo(node);
-    }
-
-    if(useCaching){
-      minCache.put(startNode, value);
-      metricRegistry.getHistogram(prefix + "Cache").update(minCache.size());
-    }
-    return value;
-  }
 
   public String report() {
     return String.format(
-      this.getClass().getName() +
+        this.getClass().getName() +
         ": \n"
         + " GlobalTimer: MIN: %.2f, AVG: %.2f, MAX: %.2f\n"
         + " LocalTimer: MIN: %.2f, AVG: %.2f, MAX: %.2f\n"
-        + " Counter: Min: %d, Max: %d\n"
+        + " Counter: %d\n"
         + " CacheSize: Min: %s, AVG: %.2f, Max: %s\n"
         + " Cache: Miss: %s, Hit: %s",
       metricRegistry.getTimer(prefix + "computeBestAction").getMinTime(),
@@ -166,8 +131,7 @@ public class MiniMaxAlgorithm <N extends MiniMaxAlgorithm.INode<A>, A extends Mi
       metricRegistry.getTimer(prefix + "computeBestActionPerNode").getMinTime(),
       metricRegistry.getTimer(prefix + "computeBestActionPerNode").getAvgTime(),
       metricRegistry.getTimer(prefix + "computeBestActionPerNode").getMaxTime(),
-      metricRegistry.getCounter(prefix + "minValue").getCount(),
-      metricRegistry.getCounter(prefix + "maxValue").getCount(),
+      metricRegistry.getCounter(prefix + "negaMax").getCount(),
       metricRegistry.getHistogram(prefix + "Cache").getMinValue(),
       metricRegistry.getHistogram(prefix + "Cache").getAvgValue(),
       metricRegistry.getHistogram(prefix + "Cache").getMaxValue(),

@@ -20,7 +20,6 @@ public class Simulator {
     @Inject
     public void setPlayer1(@Named("player_1") Player player1) {
         this.player1 = player1;
-        this.player1.setSide(Game.Side.X);
     }
 
     public Player getPlayerO() {
@@ -30,41 +29,42 @@ public class Simulator {
     @Inject
     public void setPlayer2(@Named("player_2") Player player2) {
         this.player2 = player2;
-        this.player2.setSide(Game.Side.O);
     }
 
-    public SimulationResult simulate(int gameCount){
+    public SimulationResult simulate(int gameCount, boolean drawFirst){
         SimulationResult result = new SimulationResult();
         for (int i=0; i < gameCount; i++){
-            if( i % Math.ceil(gameCount / 100) == 0) {
-                System.out.println(Math.round(i * 100 / gameCount));
+            if( (i+1) % Math.ceil(gameCount / 10) == 0) {
+                System.out.print(Math.round((i+1) * 100 / gameCount));
+                System.out.print(",");
             }
+            getPlayerX().setSide(Side.X);
+            getPlayerO().setSide(Side.O);
             Game game = new Game();
-            if (i == 0)
+            if (drawFirst)
                 game.draw();
             while(game.getGameOutcome() == Game.Outcome.UNDETERMINED){
                 Player currentPlayer = game.getCurrentSide() == Game.Side.X ? getPlayerX() : getPlayerO();
                 Point p = currentPlayer.next(game);
                 game.playTurn(p);
-                if (i == 0) game.draw();
+                if (drawFirst) game.draw();
             }
-
-            result.addGameOutcome(game.getGameOutcome());
+            result.addGameOutcome(game.getGameOutcome(), player_1_first);
             player_1_first = !player_1_first;
         }
 
-        result.addMetricReport(Side.X, player1.report());
-        result.addMetricReport(Side.O, player2.report());
+        result.addMetricReport(1, player1.report());
+        result.addMetricReport(2, player2.report());
         return result;
     }
 
     public static class SimulationResult{
-        private int gamesWonByX;
-        private int gamesWonByO;
+        private int gamesWonByPlayer1;
+        private int gamesWonByPlayer2;
         private int gamesDrawn;
         private int gamesCount;
-        private String playerXReport;
-        private String playerOReport;
+        private String player1Report;
+        private String player2Report;
 
 
         public double getAvgTime(){
@@ -84,12 +84,12 @@ public class Simulator {
         }
 
 
-        public int getGamesWonByX() {
-            return gamesWonByX;
+        public int getGamesWonByPlayer1() {
+            return gamesWonByPlayer1;
         }
 
-        public int getGamesWonByO() {
-            return gamesWonByO;
+        public int getGamesWonByPlayer2() {
+            return gamesWonByPlayer2;
         }
 
         public int getGamesDrawn() {
@@ -100,26 +100,35 @@ public class Simulator {
             return gamesCount;
         }
 
-        public void addGameOutcome(Game.Outcome o){
+        public void addGameOutcome(Game.Outcome o, boolean player1first ){
             gamesCount ++;
             if (o == Game.Outcome.DRAW){
                 gamesDrawn++;
             }
             if (o == Game.Outcome.O_WON){
-                gamesWonByO++;
+                if(player1first){
+                    gamesWonByPlayer2++;
+                } else {
+                    gamesWonByPlayer1++;
+                }
+
             }
             if (o == Game.Outcome.X_WON){
-                gamesWonByX++;
+                if(player1first){
+                    gamesWonByPlayer1++;
+                } else {
+                    gamesWonByPlayer2++;
+                }
             }
 
         }
 
-        public float getPercentageWon(Game.Side s){
-            if (s == Game.Side.X){
-                return gamesWonByX * 100 / gamesCount;
+        public float getPercentageWon(int player){
+            if (player == 1){
+                return gamesWonByPlayer1 * 100 / gamesCount;
             }
-            if (s == Game.Side.O){
-                return gamesWonByO * 100 / gamesCount;
+            if (player == 2){
+                return gamesWonByPlayer2 * 100 / gamesCount;
             }
             return 0;
         }
@@ -135,23 +144,23 @@ public class Simulator {
                       + "PlayerX: %s\n"
                       + "PlayerO: %s",
                     this.getGamesCount(),
-                    this.getGamesWonByX(),
-                    this.getPercentageWon(Game.Side.X),
-                    this.getGamesWonByO(),
-                    this.getPercentageWon(Game.Side.O),
+                    this.getGamesWonByPlayer1(),
+                    this.getPercentageWon(1),
+                    this.getGamesWonByPlayer2(),
+                    this.getPercentageWon(2),
                     this.getGamesDrawn(),
                     this.getPercentageDrawn(),
-                    this.playerXReport,
-                    this.playerOReport
+                    this.player1Report,
+                    this.player2Report
             );
         }
 
-        public void addMetricReport(Side side, String report) {
-            if(side == Side.X){
-                playerXReport = report;
+        public void addMetricReport(int player, String report) {
+            if(player == 1){
+                player1Report = report;
             }
-            if(side == Side.O){
-                playerOReport = report;
+            if(player == 2){
+                player2Report = report;
             }
         }
     }

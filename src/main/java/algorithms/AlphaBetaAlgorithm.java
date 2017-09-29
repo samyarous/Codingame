@@ -6,25 +6,18 @@ import java.util.Map;
 import utils.MetricRegistry;
 import utils.MetricRegistry.Timer;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import utils.MetricRegistry;
-import utils.MetricRegistry.Counter;
-import utils.MetricRegistry.Timer;
-
 /**
  * Generic implementation of the minimax algorithm
  *
  * Supports partial search, caching and backtracking
  */
-public class AlphaBetaPruningAlgorithm <N extends AlphaBetaPruningAlgorithm.INode<A>, A extends AlphaBetaPruningAlgorithm.IAction<N>>{
+public class AlphaBetaAlgorithm<N extends AlphaBetaAlgorithm.INode<A>, A extends AlphaBetaAlgorithm.IAction<N>>{
 
 
   private boolean useCaching = true;
   private int     startDepth = Integer.MAX_VALUE;
-  private final static Map<INode, Double> minCache = new HashMap<>();
-  private final static Map<INode, Double> maxCache = new HashMap<>();
+  private Map<INode, Double> minCache;
+  private Map<INode, Double> maxCache;
 
   private String prefix = this.getClass().getName() + Integer.toString(this.hashCode());
 
@@ -35,15 +28,15 @@ public class AlphaBetaPruningAlgorithm <N extends AlphaBetaPruningAlgorithm.INod
    * @param useCaching if set to true, we will cache previously visited nodes
    * @param startDepth Specify the maximal depth to explore
    */
-  public AlphaBetaPruningAlgorithm(boolean useCaching, int startDepth) {
-    this.useCaching = useCaching;
+  public AlphaBetaAlgorithm(boolean useCaching, int startDepth) {
+    this.useCaching = true;
     this.startDepth = startDepth;
   }
 
   /**
    *
    */
-  public AlphaBetaPruningAlgorithm() {
+  public AlphaBetaAlgorithm() {
   }
 
   public boolean isUseCaching() {
@@ -71,6 +64,9 @@ public class AlphaBetaPruningAlgorithm <N extends AlphaBetaPruningAlgorithm.INod
 
     double alpha = Double.NEGATIVE_INFINITY;
     double beta  = Double.POSITIVE_INFINITY;
+
+    minCache = new HashMap<>();
+    maxCache = new HashMap<>();
 
     Timer globalTimer = metricRegistry.getTimer(prefix + "computeBestAction");
 
@@ -120,10 +116,10 @@ public class AlphaBetaPruningAlgorithm <N extends AlphaBetaPruningAlgorithm.INod
       value = Math.max(value, minValue(node, depth - 1, alpha, beta));
       alpha = Math.max(value, alpha);
       action.undo(node);
-      if(value >= beta) break;
+      if(beta <= alpha) break;
     }
     if(useCaching){
-      minCache.put(startNode, value);
+      maxCache.put(startNode, value);
       metricRegistry.getHistogram(prefix + "Cache").update(minCache.size());
     }
     return value;
@@ -154,7 +150,7 @@ public class AlphaBetaPruningAlgorithm <N extends AlphaBetaPruningAlgorithm.INod
       value = Math.min(value, maxValue(node, depth - 1, alpha, beta));
       beta  = Math.min(value, beta);
       action.undo(node);
-      if(value <= alpha) break;
+      if(beta <= alpha) break;
     }
 
     if(useCaching){
@@ -166,7 +162,8 @@ public class AlphaBetaPruningAlgorithm <N extends AlphaBetaPruningAlgorithm.INod
 
   public String report() {
     return String.format(
-      "AlphaBeta: \n"
+      this.getClass().getName() +
+        ": \n"
         + " GlobalTimer: MIN: %.2f, AVG: %.2f, MAX: %.2f\n"
         + " LocalTimer: MIN: %.2f, AVG: %.2f, MAX: %.2f\n"
         + " Counter: Min: %d, Max: %d\n"
