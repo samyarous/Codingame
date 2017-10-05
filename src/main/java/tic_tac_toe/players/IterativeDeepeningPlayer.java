@@ -1,6 +1,11 @@
 package tic_tac_toe.players;
 
-import algorithms.AlphaBetaAlgorithm;
+import static tic_tac_toe.Game.Side.O;
+import static tic_tac_toe.Game.Side.X;
+
+import algorithms.IterativeDeepeningAlgorithm;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import tic_tac_toe.Constants;
 import tic_tac_toe.Game;
@@ -8,17 +13,11 @@ import tic_tac_toe.Game.Side;
 import tic_tac_toe.Player;
 import tic_tac_toe.Point;
 
-import java.util.ArrayList;
-import java.util.List;
+public class IterativeDeepeningPlayer extends Player {
 
-import static tic_tac_toe.Game.Side.O;
-import static tic_tac_toe.Game.Side.X;
+  public static class PossibleAction implements IterativeDeepeningAlgorithm.IAction<GameState> {
 
-public class AlphaBetaPlayer extends Player {
-
-  public static class PossibleAction implements AlphaBetaAlgorithm.IAction<GameState> {
-
-    Game.Side side;
+    Side side;
     Point p;
     public PossibleAction(Point p) {
       this.p = p;
@@ -32,7 +31,7 @@ public class AlphaBetaPlayer extends Player {
 
     @Override
     public void undo(GameState node) {
-      node.game.setCell(p.x, p.y, Game.Side.NEUTRAL);
+      node.game.setCell(p.x, p.y, Side.NEUTRAL);
     }
 
     @Override
@@ -41,14 +40,14 @@ public class AlphaBetaPlayer extends Player {
     }
 
   }
-  public static class GameState implements AlphaBetaAlgorithm.INode<PossibleAction> {
+  public static class GameState implements IterativeDeepeningAlgorithm.INode<PossibleAction> {
 
     private final Random random = new Random();
 
     Game game;
-    Game.Side playerSide;
+    Side playerSide;
 
-    public GameState(Game game, Game.Side playerSide) {
+    public GameState(Game game, Side playerSide) {
       this.game = game;
       this.playerSide = playerSide;
     }
@@ -58,7 +57,7 @@ public class AlphaBetaPlayer extends Player {
       List<PossibleAction> result = new ArrayList<>();
       for (int x=0; x < Game.BOARD_SIZE; x++) {
         for (int y = 0; y < Game.BOARD_SIZE; y++) {
-          if (game.getCell(x, y) == Game.Side.NEUTRAL){
+          if (game.getCell(x, y) == Side.NEUTRAL){
             result.add(new PossibleAction(new Point(x, y)));
           }
         }
@@ -148,7 +147,7 @@ public class AlphaBetaPlayer extends Player {
     }
   }
 
-  AlphaBetaAlgorithm<GameState, PossibleAction> algorithm = new AlphaBetaAlgorithm<>(Constants.USE_CACHING, Constants.MAX_DEPTH);
+  IterativeDeepeningAlgorithm<GameState, PossibleAction> algorithm = new IterativeDeepeningAlgorithm<>(Constants.USE_CACHING, Constants.MAX_DEPTH);
 
   public Point next(Game game) {
     GameState gameState = new GameState(game, this.getSide());

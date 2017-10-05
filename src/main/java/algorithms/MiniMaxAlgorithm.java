@@ -20,7 +20,7 @@ public class MiniMaxAlgorithm <N extends MiniMaxAlgorithm.INode<A>, A extends Mi
   private Map<INode, Double> minCache = new HashMap<>();
   private Map<INode, Double> maxCache = new HashMap<>();
 
-  private String prefix = this.getClass().getName() + Integer.toString(this.hashCode());
+  private String prefix = this.getClass().getName();
 
   private static MetricRegistry metricRegistry = MetricRegistry.getInstance();
 

@@ -1,7 +1,9 @@
 package tic_tac_toe.players;
 
 import java.util.Random;
+import tic_tac_toe.Constants;
 import tic_tac_toe.Game;
+import tic_tac_toe.Game.Side;
 import tic_tac_toe.Player;
 import tic_tac_toe.Point;
 import algorithms.MiniMaxAlgorithm;
@@ -76,14 +78,59 @@ public class MiniMaxPlayer extends Player {
         public double getUtility() {
             switch (game.getGameOutcome()){
                 case X_WON:
-                    return playerSide == X ? 100: -100;
+                    return playerSide == X ? 150 : -150;
                 case O_WON:
-                    return playerSide == O ? 100: -100;
+                    return playerSide == O ? 150 : -150;
                 case DRAW:
                     return 0;
-                default:
-                    return 0;
             }
+
+            int[] columnsScore = new int[game.BOARD_SIZE];
+            int[] rowsScore    = new int[game.BOARD_SIZE];
+            int[] diagonalsScore   = new int[2];
+
+            for (int x=0; x < game.BOARD_SIZE; x++){
+                for (int y=0; y < game.BOARD_SIZE; y++){
+                    int cellScore = 0;
+                    if(game.getCell(x, y) == playerSide){
+                        cellScore = 1;
+                    } else if (game.getCell(x, y) == playerSide.getOther()){
+                        cellScore = -1;
+                    }
+                    // compute each columns score
+                    columnsScore[x] += cellScore;
+                    rowsScore[y] += cellScore;
+                    if(x == y) {
+                        diagonalsScore[0] += cellScore;
+                    }
+                    if(x + y == game.BOARD_SIZE - 1) {
+                        diagonalsScore[1] += cellScore;
+                    }
+                }
+            }
+
+            double bestCellScore = 0;
+
+            for (int x=0; x < game.BOARD_SIZE; x++) {
+                for (int y = 0; y < game.BOARD_SIZE; y++) {
+
+                    if(game.getCell(x, y) == Side.NEUTRAL){
+                        double cellScore = 0;
+                        cellScore += Math.pow(5, Math.abs(columnsScore[x])) * columnsScore[x];
+                        cellScore += Math.pow(5, Math.abs(rowsScore[y])) * rowsScore[y];
+                        if(x == y) {
+                            cellScore += Math.pow(5, Math.abs(diagonalsScore[0])) * diagonalsScore[0];
+                        }
+                        if(x + y == game.BOARD_SIZE - 1) {
+                            cellScore += Math.pow(5, Math.abs(diagonalsScore[1])) * diagonalsScore[1];
+                        }
+
+                        bestCellScore = Math.max(bestCellScore, cellScore);
+                    }
+                }
+            }
+
+            return bestCellScore;
         }
 
         @Override
@@ -102,7 +149,7 @@ public class MiniMaxPlayer extends Player {
         }
     }
 
-    MiniMaxAlgorithm<GameState, PossibleAction> algorithm = new MiniMaxAlgorithm<>(true, Integer.MAX_VALUE);
+    MiniMaxAlgorithm<GameState, PossibleAction> algorithm = new MiniMaxAlgorithm<>(Constants.USE_CACHING, Constants.MAX_DEPTH);
 
     public Point next(Game game) {
         GameState gameState = new GameState(game, this.getSide());

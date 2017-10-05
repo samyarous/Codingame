@@ -1,5 +1,6 @@
 package algorithms;
 
+import algorithms.AlphaBetaAlgorithm.CachedValue.CacheFlag;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,14 +15,12 @@ import utils.MetricRegistry.Timer;
 public class AlphaBetaAlgorithm<N extends AlphaBetaAlgorithm.INode<A>, A extends AlphaBetaAlgorithm.IAction<N>>{
 
 
+  private static MetricRegistry metricRegistry = MetricRegistry.getInstance();
   private boolean useCaching = true;
   private int     startDepth = Integer.MAX_VALUE;
-  private Map<INode, Double> minCache;
-  private Map<INode, Double> maxCache;
-
-  private String prefix = this.getClass().getName() + Integer.toString(this.hashCode());
-
-  private static MetricRegistry metricRegistry = MetricRegistry.getInstance();
+  private Map<INode, CachedValue> minCache;
+  private Map<INode, CachedValue> maxCache;
+  private String prefix = this.getClass().getName();
 
   /**
    *
@@ -29,7 +28,7 @@ public class AlphaBetaAlgorithm<N extends AlphaBetaAlgorithm.INode<A>, A extends
    * @param startDepth Specify the maximal depth to explore
    */
   public AlphaBetaAlgorithm(boolean useCaching, int startDepth) {
-    this.useCaching = true;
+    this.useCaching = useCaching;
     this.startDepth = startDepth;
   }
 
@@ -74,7 +73,7 @@ public class AlphaBetaAlgorithm<N extends AlphaBetaAlgorithm.INode<A>, A extends
     double bestOutcome = Double.NEGATIVE_INFINITY;
     A bestAction = null;
 
-    for (A action: startNode.getPossibleActions()){
+    for (A action: startNode.getPossibleActions()) {
       Timer perNodeTimer = metricRegistry.getTimer(prefix + "computeBestActionPerNode");
       perNodeTimer.startMeasure();
       N node  = action.apply(startNode);
@@ -100,29 +99,54 @@ public class AlphaBetaAlgorithm<N extends AlphaBetaAlgorithm.INode<A>, A extends
   public double maxValue(N startNode, int depth, double alpha, double beta){
     metricRegistry.getCounter(prefix + "maxValue").update();
 
-    double value = Double.NEGATIVE_INFINITY;
-    if(depth == 0 || startNode.isTerminal()){
-      return startNode.getUtility();
-    }
+    double orgAlpha = alpha;
     if(useCaching && maxCache.containsKey(startNode)){
       metricRegistry.getCounter(prefix + "CacheHit").update();
-      return maxCache.get(startNode);
+      CachedValue cachedValue = maxCache.get(startNode);
+      if(cachedValue.depth >= depth){
+        switch (cachedValue.flag ){
+          case EXACT:
+            return cachedValue.value;
+          case LOWERBOUND:
+            alpha = Math.max(alpha, cachedValue.value);
+            break;
+          case UPPERBOUND:
+            beta = Math.min(beta, cachedValue.value);
+            break;
+        }
+        if (alpha >= beta) return cachedValue.value;
+      }
     } else {
       metricRegistry.getCounter(prefix + "CacheMiss").update();
     }
 
+    double bestValue = Double.NEGATIVE_INFINITY;
+    if(depth == 0 || startNode.isTerminal()){
+      return startNode.getUtility();
+    }
+
     for (A action: startNode.getPossibleActions()){
       N node  = action.apply(startNode);
-      value = Math.max(value, minValue(node, depth - 1, alpha, beta));
-      alpha = Math.max(value, alpha);
+      bestValue = Math.max(bestValue, minValue(node, depth - 1, alpha, beta));
+      alpha = Math.max(bestValue, alpha);
       action.undo(node);
       if(beta <= alpha) break;
     }
     if(useCaching){
-      maxCache.put(startNode, value);
-      metricRegistry.getHistogram(prefix + "Cache").update(minCache.size());
+      CachedValue cachedValue = new CachedValue();
+      cachedValue.setDepth(depth);
+      cachedValue.setValue(bestValue);
+      if (bestValue <= orgAlpha){
+        cachedValue.setFlag(CacheFlag.UPPERBOUND);
+      } else if (bestValue >= beta){
+        cachedValue.setFlag(CacheFlag.LOWERBOUND);
+      } else {
+        cachedValue.setFlag(CacheFlag.EXACT);
+      }
+      maxCache.put(startNode, cachedValue);
+      metricRegistry.getHistogram(prefix + "MaxCache").update(maxCache.size());
     }
-    return value;
+    return bestValue;
   }
 
   /**
@@ -134,30 +158,56 @@ public class AlphaBetaAlgorithm<N extends AlphaBetaAlgorithm.INode<A>, A extends
    */
   public double minValue(N startNode, int depth, double alpha, double beta){
     metricRegistry.getCounter(prefix + "minValue").update();
-    if(depth == 0 || startNode.isTerminal()){
-      return startNode.getUtility();
-    }
+    double orgBeta = beta;
     if(useCaching && minCache.containsKey(startNode)){
       metricRegistry.getCounter(prefix + "CacheHit").update();
-      return minCache.get(startNode);
+      CachedValue cachedValue = minCache.get(startNode);
+      if(cachedValue.depth >= depth){
+        switch (cachedValue.flag ){
+          case EXACT:
+            return cachedValue.value;
+          case LOWERBOUND:
+            alpha = Math.max(alpha, cachedValue.value);
+            break;
+          case UPPERBOUND:
+            beta = Math.min(beta, cachedValue.value);
+            break;
+        }
+        if (alpha >= beta) return cachedValue.value;
+      }
     } else {
       metricRegistry.getCounter(prefix + "CacheMiss").update();
     }
 
-    double value = Double.POSITIVE_INFINITY;
+
+    if(depth == 0 || startNode.isTerminal()){
+      return startNode.getUtility();
+    }
+
+    double bestValue = Double.POSITIVE_INFINITY;
     for (A action: startNode.getPossibleActions()){
       N node  = action.apply(startNode);
-      value = Math.min(value, maxValue(node, depth - 1, alpha, beta));
-      beta  = Math.min(value, beta);
+      bestValue = Math.min(bestValue, maxValue(node, depth - 1, alpha, beta));
+      beta  = Math.min(bestValue, beta);
       action.undo(node);
       if(beta <= alpha) break;
     }
 
     if(useCaching){
-      minCache.put(startNode, value);
-      metricRegistry.getHistogram(prefix + "Cache").update(minCache.size());
+      CachedValue cachedValue = new CachedValue();
+      cachedValue.setDepth(depth);
+      cachedValue.setValue(bestValue);
+      if (bestValue <= alpha){
+        cachedValue.setFlag(CacheFlag.UPPERBOUND);
+      } else if (bestValue >= orgBeta){
+        cachedValue.setFlag(CacheFlag.LOWERBOUND);
+      } else {
+        cachedValue.setFlag(CacheFlag.EXACT);
+      }
+      minCache.put(startNode, cachedValue);
+      metricRegistry.getHistogram(prefix + "MinCache").update(minCache.size());
     }
-    return value;
+    return bestValue;
   }
 
   public String report() {
@@ -218,6 +268,42 @@ public class AlphaBetaAlgorithm<N extends AlphaBetaAlgorithm.INode<A>, A extends
     public double getUtility();
   }
 
+  public static class CachedValue{
 
+    private CacheFlag flag;
+    private int depth;
+    private double value;
+
+    public CacheFlag getFlag() {
+      return flag;
+    }
+
+    public void setFlag(CacheFlag flag) {
+      this.flag = flag;
+    }
+
+    public double getValue() {
+      return value;
+    }
+
+    public void setValue(double value) {
+      this.value = value;
+    }
+
+    public int getDepth() {
+      return depth;
+    }
+
+    public void setDepth(int depth) {
+      this.depth = depth;
+
+    }
+
+    public static enum CacheFlag {
+      EXACT,
+      LOWERBOUND,
+      UPPERBOUND
+    }
+  }
 }
 

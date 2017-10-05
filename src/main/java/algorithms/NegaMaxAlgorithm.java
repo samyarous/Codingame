@@ -11,14 +11,14 @@ import utils.MetricRegistry.Timer;
  *
  * Supports partial search, caching and backtracking
  */
-public class NegaMaxAlgorithm <N extends NegaMaxAlgorithm.INode<A>, A extends NegaMaxAlgorithm.IAction<N>>{
+public class NegaMaxAlgorithm<N extends NegaMaxAlgorithm.INode<A>, A extends NegaMaxAlgorithm.IAction<N>>{
 
 
   private boolean useCaching = false;
   private int     startDepth = Integer.MAX_VALUE;
   private Map<INode, Double> cache = new HashMap<>();
 
-  private String prefix = this.getClass().getName() + Integer.toString(this.hashCode());
+  private String prefix = this.getClass().getName();
 
   private static MetricRegistry metricRegistry = MetricRegistry.getInstance();
 
@@ -71,7 +71,7 @@ public class NegaMaxAlgorithm <N extends NegaMaxAlgorithm.INode<A>, A extends Ne
       Timer perNodeTimer = metricRegistry.getTimer(prefix + "computeBestActionPerNode");
       perNodeTimer.startMeasure();
       N node  = action.apply(startNode);
-      double outcome = -negaMax(node, this.startDepth, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
+      double outcome = -negaMax(node, this.startDepth);
       if (outcome > bestOutcome  ){
         bestAction = action;
         bestOutcome = outcome;
@@ -89,35 +89,28 @@ public class NegaMaxAlgorithm <N extends NegaMaxAlgorithm.INode<A>, A extends Ne
    * @param startNode
    * @param depth
    */
-  public double negaMax(N startNode, int depth, double alpha, double beta){
-    metricRegistry.getCounter(prefix + "negaMax").update();
+  public double negaMax(N startNode, int depth){
+    metricRegistry.getCounter(prefix + "negaMaxWithMemorisation").update();
 
     double value = Double.NEGATIVE_INFINITY;
     if(depth == 0 || startNode.isTerminal()){
       return startNode.getUtility();
     }
-    /*if(useCaching && cache.containsKey(startNode)){
+    if(useCaching && cache.containsKey(startNode)){
       metricRegistry.getCounter(prefix + "CacheHit").update();
       return cache.get(startNode);
     } else {
       metricRegistry.getCounter(prefix + "CacheMiss").update();
-    }*/
+    }
 
     for (A action: startNode.getPossibleActions()){
       N node  = action.apply(startNode);
-      if(useCaching && cache.containsKey(node)){
-        value = Math.max(value, -cache.get(node));
-      } else {
-        value = Math.max(value, -negaMax(node, depth - 1, -beta, -alpha));
-        if(useCaching){
-          cache.put(node, -value);
-        }
-      }
-      alpha = Math.max(alpha, value);
+      value = Math.max(value, -negaMax(node, depth - 1));
       action.undo(node);
-      if(alpha >= beta){
-        break;
-      }
+    }
+    if(useCaching){
+      cache.put(startNode, value);
+      metricRegistry.getHistogram(prefix + "Cache").update(cache.size());
     }
     return value;
   }
@@ -138,7 +131,7 @@ public class NegaMaxAlgorithm <N extends NegaMaxAlgorithm.INode<A>, A extends Ne
       metricRegistry.getTimer(prefix + "computeBestActionPerNode").getMinTime(),
       metricRegistry.getTimer(prefix + "computeBestActionPerNode").getAvgTime(),
       metricRegistry.getTimer(prefix + "computeBestActionPerNode").getMaxTime(),
-      metricRegistry.getCounter(prefix + "negaMax").getCount(),
+      metricRegistry.getCounter(prefix + "negaMaxWithMemorisation").getCount(),
       metricRegistry.getHistogram(prefix + "Cache").getMinValue(),
       metricRegistry.getHistogram(prefix + "Cache").getAvgValue(),
       metricRegistry.getHistogram(prefix + "Cache").getMaxValue(),

@@ -3,17 +3,19 @@ package tic_tac_toe.players;
 import static tic_tac_toe.Game.Side.O;
 import static tic_tac_toe.Game.Side.X;
 
-import algorithms.NegaMaxAlphaBetaAlgorithm;
+import algorithms.NegaMaxAlgorithm;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import tic_tac_toe.Constants;
 import tic_tac_toe.Game;
+import tic_tac_toe.Game.Side;
 import tic_tac_toe.Player;
 import tic_tac_toe.Point;
 
 public class NegaMaxPlayer extends Player {
 
-  public static class PossibleAction implements NegaMaxAlphaBetaAlgorithm.IAction<GameState> {
+  public static class PossibleAction implements NegaMaxAlgorithm.IAction<GameState> {
 
     Game.Side side;
     Point p;
@@ -38,7 +40,7 @@ public class NegaMaxPlayer extends Player {
     }
 
   }
-  public class GameState implements NegaMaxAlphaBetaAlgorithm.INode<PossibleAction> {
+  public class GameState implements NegaMaxAlgorithm.INode<PossibleAction> {
 
     private final Random random = new Random();
 
@@ -60,7 +62,7 @@ public class NegaMaxPlayer extends Player {
           }
         }
       }
-      result.sort((PossibleAction a, PossibleAction b) -> random.nextInt());
+      /*result.sort((PossibleAction a, PossibleAction b) -> random.nextInt());*/
       return result;
 
     }
@@ -74,15 +76,59 @@ public class NegaMaxPlayer extends Player {
     public double getUtility() {
       switch (game.getGameOutcome()){
         case X_WON:
-          return game.getCurrentSide() == X ? 100: -100;
+          return game.getCurrentSide() == X ? 150 : -150;
         case O_WON:
-          return game.getCurrentSide() == O ? 100: -100;
+          return game.getCurrentSide() == O ? 150 : -150;
         case DRAW:
           return 0;
-        default:
-          throw new RuntimeException("Not ready");
       }
 
+      int[] columnsScore = new int[game.BOARD_SIZE];
+      int[] rowsScore    = new int[game.BOARD_SIZE];
+      int[] diagonalsScore   = new int[2];
+
+      for (int x=0; x < game.BOARD_SIZE; x++){
+        for (int y=0; y < game.BOARD_SIZE; y++){
+          int cellScore = 0;
+          if(game.getCell(x, y) == game.getCurrentSide()){
+            cellScore = 1;
+          } else if (game.getCell(x, y) == game.getCurrentSide().getOther()){
+            cellScore = -1;
+          }
+          // compute each columns score
+          columnsScore[x] += cellScore;
+          rowsScore[y] += cellScore;
+          if(x == y) {
+            diagonalsScore[0] += cellScore;
+          }
+          if(x + y == game.BOARD_SIZE - 1) {
+            diagonalsScore[1] += cellScore;
+          }
+        }
+      }
+
+      double bestCellScore = 0;
+
+      for (int x=0; x < game.BOARD_SIZE; x++) {
+        for (int y = 0; y < game.BOARD_SIZE; y++) {
+
+          if(game.getCell(x, y) == Side.NEUTRAL){
+            double cellScore = 0;
+            cellScore += Math.pow(5, Math.abs(columnsScore[x])) * columnsScore[x];
+            cellScore += Math.pow(5, Math.abs(rowsScore[y])) * rowsScore[y];
+            if(x == y) {
+              cellScore += Math.pow(5, Math.abs(diagonalsScore[0])) * diagonalsScore[0];
+            }
+            if(x + y == game.BOARD_SIZE - 1) {
+              cellScore += Math.pow(5, Math.abs(diagonalsScore[1])) * diagonalsScore[1];
+            }
+
+            bestCellScore = Math.max(bestCellScore, cellScore);
+          }
+        }
+      }
+
+      return bestCellScore;
     }
 
     @Override
@@ -101,7 +147,7 @@ public class NegaMaxPlayer extends Player {
     }
   }
 
-  NegaMaxAlphaBetaAlgorithm<GameState, PossibleAction> algorithm = new NegaMaxAlphaBetaAlgorithm<>(true, Integer.MAX_VALUE);
+  NegaMaxAlgorithm<GameState, PossibleAction> algorithm = new NegaMaxAlgorithm<>(Constants.USE_CACHING, Constants.MAX_DEPTH);
 
   public Point next(Game game) {
     GameState gameState = new GameState(game, this.getSide());
